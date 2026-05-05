@@ -1,0 +1,15 @@
+{
+  "name": "focusmc-keepalive-bot",
+  "version": "1.0.0",
+  "description": "Minecraft keep-alive bot for Railway using mineflayer.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mineflayer": "^4.27.0"
+  }
+}
