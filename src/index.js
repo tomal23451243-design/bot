@@ -1,4 +1,5 @@
 const mineflayer = require('mineflayer');
+const { status } = require('minecraft-server-util');
 
 const config = {
   host: process.env.MC_HOST || 'focusmc.aternos.me',
@@ -7,6 +8,7 @@ const config = {
   version: process.env.MC_VERSION || '1.21.1',
   loginCommand: process.env.MC_LOGIN_COMMAND || '/login Haslo123!',
   reconnectDelayMs: Number(process.env.RECONNECT_DELAY_MS || 15000),
+  offlineDelayMs: Number(process.env.OFFLINE_DELAY_MS || 60000),
   moveIntervalMs: Number(process.env.MOVE_INTERVAL_MS || 10000)
 };
 
@@ -30,7 +32,7 @@ function clearMovement() {
   }
 }
 
-function scheduleReconnect(reason) {
+function scheduleReconnect(reason, delayOverrideMs = null) {
   clearMovement();
 
   if (reconnectTimer) {
@@ -38,12 +40,15 @@ function scheduleReconnect(reason) {
   }
 
   reconnectAttempts += 1;
-  const delay = Math.min(config.reconnectDelayMs * reconnectAttempts, 120000);
+  const delay = delayOverrideMs || Math.min(config.reconnectDelayMs * reconnectAttempts, 120000);
   log(`Reconnect in ${Math.round(delay / 1000)}s. Reason: ${reason}`);
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
-    startBot();
+    startBot().catch((error) => {
+      log(`Start failed: ${error.message}`);
+      scheduleReconnect('start failed');
+    });
   }, delay);
 }
 
@@ -75,7 +80,23 @@ function startMovement() {
   }, config.moveIntervalMs);
 }
 
-function startBot() {
+async function waitForOnlineServer() {
+  try {
+    const response = await status(config.host, config.port, { timeout: 8000 });
+    log(`Server online: ${response.players.online}/${response.players.max} players.`);
+    return true;
+  } catch (error) {
+    log(`Server is offline or not accepting pings yet: ${error.message}`);
+    scheduleReconnect('server offline', config.offlineDelayMs);
+    return false;
+  }
+}
+
+async function startBot() {
+  if (!(await waitForOnlineServer())) {
+    return;
+  }
+
   log(`Connecting to ${config.host}:${config.port} as ${config.username} on ${config.version}`);
 
   bot = mineflayer.createBot({
@@ -122,4 +143,7 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-startBot();
+startBot().catch((error) => {
+  log(`Start failed: ${error.message}`);
+  scheduleReconnect('start failed');
+});
