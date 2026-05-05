@@ -2,11 +2,11 @@ const mineflayer = require('mineflayer');
 const { status } = require('minecraft-server-util');
 
 const config = {
-  host: process.env.MC_HOST || 'focusmc.aternos.me',
+  host: (process.env.MC_HOST || 'focusmc.aternos.me').trim(),
   port: Number(process.env.MC_PORT || 25565),
-  username: process.env.MC_USERNAME || `KeepAlive_${Math.floor(Math.random() * 10000)}`,
-  version: process.env.MC_VERSION || '1.21.1',
-  loginCommand: process.env.MC_LOGIN_COMMAND || '/login Haslo123!',
+  username: (process.env.MC_USERNAME || `KeepAlive_${Math.floor(Math.random() * 10000)}`).trim(),
+  version: (process.env.MC_VERSION || '1.21.1').trim(),
+  loginCommand: (process.env.MC_LOGIN_COMMAND || '/login Haslo123!').trim(),
   reconnectDelayMs: Number(process.env.RECONNECT_DELAY_MS || 15000),
   offlineDelayMs: Number(process.env.OFFLINE_DELAY_MS || 60000),
   moveIntervalMs: Number(process.env.MOVE_INTERVAL_MS || 10000)
@@ -19,6 +19,14 @@ let reconnectAttempts = 0;
 
 function log(message) {
   console.log(`[${new Date().toISOString()}] ${message}`);
+}
+
+function validateConfig() {
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(config.username)) {
+    throw new Error(
+      `Invalid MC_USERNAME "${config.username}". Use 3-16 characters: letters, numbers, underscore. No spaces.`
+    );
+  }
 }
 
 function clearMovement() {
@@ -142,6 +150,8 @@ process.on('SIGINT', () => {
   }
   process.exit(0);
 });
+
+validateConfig();
 
 startBot().catch((error) => {
   log(`Start failed: ${error.message}`);
