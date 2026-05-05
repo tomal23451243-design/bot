@@ -12,7 +12,7 @@ Bot Minecraft do utrzymywania serwera online. Dziala na Node.js i Mineflayer.
 ```text
 MC_HOST=focusmc.aternos.me
 MC_PORT=25565
-MC_VERSION=1.21.1
+MC_VERSION=auto
 MC_USERNAME=FocusBot123
 MC_LOGIN_COMMAND=/login Haslo123!
 RECONNECT_DELAY_MS=15000
@@ -33,6 +33,7 @@ npm start
 ## Konfiguracja
 
 - `MC_USERNAME` musi byc nazwa konta/bota na serwerze.
+- `MC_VERSION=auto` pozwala botowi dobrac wersje z serwera. Mozesz ustawic `1.21.1`, jesli auto nie zadziala.
 - `MC_LOGIN_COMMAND` to komenda wpisywana po kazdym wejsciu na serwer.
 - `RECONNECT_DELAY_MS` ustawia opoznienie przed ponownym wejsciem po wyrzuceniu.
 - `OFFLINE_DELAY_MS` ustawia, jak dlugo bot czeka, gdy serwer jest offline.

@@ -5,7 +5,7 @@ const config = {
   host: (process.env.MC_HOST || 'focusmc.aternos.me').trim(),
   port: Number(process.env.MC_PORT || 25565),
   username: (process.env.MC_USERNAME || `KeepAlive_${Math.floor(Math.random() * 10000)}`).trim(),
-  version: (process.env.MC_VERSION || '1.21.1').trim(),
+  version: (process.env.MC_VERSION || 'auto').trim(),
   loginCommand: (process.env.MC_LOGIN_COMMAND || '/login Haslo123!').trim(),
   reconnectDelayMs: Number(process.env.RECONNECT_DELAY_MS || 15000),
   offlineDelayMs: Number(process.env.OFFLINE_DELAY_MS || 60000),
@@ -101,7 +101,9 @@ function startMovement() {
 async function waitForOnlineServer() {
   try {
     const response = await status(config.host, config.port, { timeout: 8000 });
-    log(`Server online: ${response.players.online}/${response.players.max} players.`);
+    const versionName = response.version?.name || 'unknown';
+    const protocol = response.version?.protocol || 'unknown';
+    log(`Server online: ${response.players.online}/${response.players.max} players. Version: ${versionName}, protocol: ${protocol}.`);
     return true;
   } catch (error) {
     log(`Server is offline or not accepting pings yet: ${error.message}`);
@@ -115,16 +117,22 @@ async function startBot() {
     return;
   }
 
-  log(`Connecting to ${config.host}:${config.port} as ${config.username} on ${config.version}`);
+  const requestedVersion = config.version.toLowerCase() === 'auto' ? 'auto-detect' : config.version;
+  log(`Connecting to ${config.host}:${config.port} as ${config.username} on ${requestedVersion}`);
 
-  bot = mineflayer.createBot({
+  const botOptions = {
     host: config.host,
     port: config.port,
     username: config.username,
-    version: config.version,
     auth: 'offline',
     hideErrors: true
-  });
+  };
+
+  if (config.version.toLowerCase() !== 'auto') {
+    botOptions.version = config.version;
+  }
+
+  bot = mineflayer.createBot(botOptions);
 
   joinTimer = setTimeout(() => {
     log(`Join timed out after ${Math.round(config.joinTimeoutMs / 1000)}s before spawn.`);
