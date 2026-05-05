@@ -9,12 +9,14 @@ const config = {
   loginCommand: (process.env.MC_LOGIN_COMMAND || '/login Haslo123!').trim(),
   reconnectDelayMs: Number(process.env.RECONNECT_DELAY_MS || 15000),
   offlineDelayMs: Number(process.env.OFFLINE_DELAY_MS || 60000),
+  joinTimeoutMs: Number(process.env.JOIN_TIMEOUT_MS || 30000),
   moveIntervalMs: Number(process.env.MOVE_INTERVAL_MS || 10000)
 };
 
 let bot = null;
 let reconnectTimer = null;
 let movementTimer = null;
+let joinTimer = null;
 let reconnectAttempts = 0;
 
 function log(message) {
@@ -40,8 +42,16 @@ function clearMovement() {
   }
 }
 
+function clearJoinTimer() {
+  if (joinTimer) {
+    clearTimeout(joinTimer);
+    joinTimer = null;
+  }
+}
+
 function scheduleReconnect(reason, delayOverrideMs = null) {
   clearMovement();
+  clearJoinTimer();
 
   if (reconnectTimer) {
     return;
@@ -116,7 +126,19 @@ async function startBot() {
     hideErrors: true
   });
 
+  joinTimer = setTimeout(() => {
+    log(`Join timed out after ${Math.round(config.joinTimeoutMs / 1000)}s before spawn.`);
+    if (bot) {
+      bot.end('join timeout');
+    }
+  }, config.joinTimeoutMs);
+
+  bot.once('login', () => {
+    log('Minecraft login accepted. Waiting for spawn.');
+  });
+
   bot.once('spawn', () => {
+    clearJoinTimer();
     reconnectAttempts = 0;
     log('Joined server. Sending login command.');
 
@@ -127,10 +149,12 @@ async function startBot() {
   });
 
   bot.on('kicked', (reason) => {
+    clearJoinTimer();
     log(`Kicked: ${typeof reason === 'string' ? reason : JSON.stringify(reason)}`);
   });
 
   bot.on('end', (reason) => {
+    clearJoinTimer();
     scheduleReconnect(reason || 'connection ended');
   });
 
@@ -145,6 +169,7 @@ process.on('SIGINT', () => {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
   }
+  clearJoinTimer();
   if (bot) {
     bot.end();
   }
